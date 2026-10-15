@@ -167,7 +167,7 @@ class GameManager:
             shutil.rmtree(work, ignore_errors=True)
 
         mod = {
-            "id": mod_id, "name": base_name, "enabled": True, "target": target,
+            "id": mod_id, "name": base_name, "enabled": True, "target": target, "readme": self._readme(mod_dir),
             "guessed": guessed, "reason": reason, "source": str(source if display_name is None else display_name),
             "installed": time.strftime("%Y-%m-%d %H:%M"), "files": len(files),
         }
@@ -175,6 +175,21 @@ class GameManager:
         self.save()
         self.sync()
         return mod
+
+    @staticmethod
+    def _readme(mod_dir: Path) -> str:
+        """First lines of the mod's own instructions, so they're shown to the user."""
+        cands = sorted((mod_dir / "docs").glob("*")) if (mod_dir / "docs").is_dir() else []
+        cands += [p for p in sorted((mod_dir / "files").iterdir()) if p.is_file() and DOC_RE.match(p.name)]
+        for p in cands:
+            if p.suffix.lower() in (".txt", ".md", ".nfo", "") or p.name.lower().startswith("readme"):
+                try:
+                    text = p.read_text(encoding="utf-8", errors="replace").strip()
+                except OSError:
+                    continue
+                if text:
+                    return text[:800] + ("..." if len(text) > 800 else "")
+        return ""
 
     def _new_id(self, name: str) -> str:
         base = config.safe_name(name).lower()[:60]

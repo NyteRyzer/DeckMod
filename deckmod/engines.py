@@ -34,6 +34,16 @@ BETHESDA_PLUGINS = {
     "976620": ("Enderal Special Edition", True),
 }
 
+# Loose-file types used by Volition's engine (Saints Row 2/The Third/IV, Red Faction).
+VOLITION_EXTS = {
+    ".xtbl", ".lua", ".le_strings", ".vint_doc", ".vint_proj", ".fxo_kg", ".dtodx",
+    ".peg_pc", ".g_peg_pc", ".cpeg_pc", ".gpeg_pc", ".cvbm_pc", ".gvbm_pc",
+    ".cmesh_pc", ".g_cmesh_pc", ".ccmesh_pc", ".gccmesh_pc", ".smesh_pc", ".gsmesh_pc",
+    ".csmesh_pc", ".gcsmesh_pc", ".morph_pc", ".rig_pc", ".anim_pc", ".mat_pc",
+    ".str2_pc", ".asm_pc", ".sim_pc", ".xwb_pc", ".xsb_pc", ".xgs_pc", ".vf3_pc",
+    ".mesh_pc", ".matlib_pc", ".cefct_pc", ".gefct_pc", ".clmesh_pc", ".glmesh_pc",
+}
+
 BETHESDA_DATA_DIRS = {
     "meshes", "textures", "scripts", "interface", "sound", "music", "materials", "seq",
     "skse", "f4se", "sfse", "nvse", "obse", "fose", "shadersfx", "strings", "video",
@@ -148,6 +158,25 @@ def detect(game_path: str | Path, appid: str | None = None, exists=None) -> Engi
             ext_targets={".lua": "reframework/autorun", ".pak": ""},
             dir_targets={"autorun": "reframework", "plugins": "reframework"},
             notes=["Most mods need REFramework (proxy DLL: dinput8.dll). Loose files go in natives/."],
+        )
+
+    # ---- Volition (Saints Row, Red Faction)
+    if any(root.glob("*.vpp_pc")) or (root / "packfiles" / "pc" / "cache").is_dir():
+        sr2 = (root / "SR2_pc.exe").exists() or appid == "9480"
+        notes = [
+            "Volition games load loose mod files (.xtbl, .g_peg_pc, .cmesh_pc, ...) from the game "
+            "folder, so DeckMod installs them there.",
+        ]
+        if sr2:
+            notes.insert(0, "Saints Row 2 only loads loose files when the community 'Gentlemen of the "
+                         "Row' (GOTR) patch is installed. Install GOTR once (it's a Windows installer: "
+                         "add it to Steam as a non-Steam game, set it to run with Proton, and point it at "
+                         "the SR2 folder). Mods whose readme says to repack patch.vpp_pc then work without "
+                         "repacking.")
+        return EngineProfile(
+            key="volition", name="Saints Row 2 (Volition)" if sr2 else "Volition (Saints Row / Red Faction)",
+            ext_targets={e: "" for e in VOLITION_EXTS},
+            notes=notes,
         )
 
     # ---- Godot

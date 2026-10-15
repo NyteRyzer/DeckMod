@@ -44,6 +44,7 @@
   table { width: 100%; border-collapse: collapse; }
   td { padding: 8px 6px; border-top: 1px solid var(--line); vertical-align: middle; }
   td.n { width: 36px; color: var(--muted); text-align: right; }
+  .readme { white-space: pre-wrap; font-size: 13px; background: var(--bg); border-radius: 8px; padding: 8px; margin: 6px 0 0; }
   .modname { font-weight: 600; } .badge { color: var(--warn); font-size: 12px; margin-left: 6px; }
   .toggle { width: 60px; } .toggle.on { background: var(--ok); border-color: var(--ok); color: #062; font-weight: 700; }
   .actions { white-space: nowrap; text-align: right; }
@@ -138,7 +139,8 @@ function renderGame() {
         <td class="n">${i + 1}</td>
         <td style="width:70px"><button class="toggle small ${m.enabled ? "on" : ""}" data-act="toggle" data-mod="${esc(m.id)}">${m.enabled ? "ON" : "OFF"}</button></td>
         <td><span class="modname">${esc(m.name)}</span>${m.guessed ? `<span class="badge">⚠ location guessed</span>` : ""}
-          <div class="muted mono">→ ${esc(m.target || "(game root)")} · ${m.files} files</div></td>
+          <div class="muted mono">→ ${esc(m.target || "(game root)")} · ${m.files} files</div>
+          ${m.readme ? `<details${m.guessed ? " open" : ""}><summary class="muted">Mod's instructions</summary><pre class="readme">${esc(m.readme)}</pre></details>` : ""}</td>
         <td class="actions">
           <button class="small" data-act="up" data-mod="${esc(m.id)}" ${i === 0 ? "disabled" : ""} title="Move up">▲</button>
           <button class="small" data-act="down" data-mod="${esc(m.id)}" ${i === mods.length - 1 ? "disabled" : ""} title="Move down">▼</button>

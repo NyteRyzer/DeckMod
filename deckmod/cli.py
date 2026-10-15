@@ -77,6 +77,8 @@ def cmd_install(a):
     for src in a.source:
         mod = m.install(src, name=a.name, target=a.target)
         print(f"Installed '{mod['name']}' -> {mod['target'] or '(game root)'}  ({mod['reason']}, {mod['files']} files)")
+        if mod.get("readme"):
+            print("  The mod's own instructions say:\n    " + mod["readme"].replace("\n", "\n    "))
         if mod["guessed"]:
             print("  ! Couldn't tell where this mod goes. If it doesn't work, set the folder with:\n"
                   f"    deckmod set-target \"{a.game}\" \"{mod['name']}\" <folder inside the game>")

@@ -122,6 +122,21 @@ class DeployTests(Base):
         self.assertEqual(mod["target"], "Proj/Content/Paks/~mods")
         self.assertTrue((root / "Proj/Content/Paks/~mods/MyMod_P.pak").exists())
 
+    def test_saints_row_2_loose_files(self):
+        root = self.add_steam_game("9480", "Saints Row 2", "Saints Row 2")
+        write(root / "SR2_pc.exe")
+        write(root / "patch.vpp_pc")
+        m = self.mgr("saints")
+        mod = m.install(str(make_zip(self.tmp / "shrek_1.0.zip", {
+            "INSTALLATION.txt": "Pack files from MOD_FILES folder into patch.vpp_pc using Gibbed tools.",
+            "MOD_FILES/customization_items.xtbl": "x", "MOD_FILES/cmbod_human.g_cmesh_pc": "m"})))
+        self.assertEqual(mod["target"], "")
+        self.assertFalse(mod["guessed"])
+        self.assertIn("Gibbed", mod["readme"])
+        self.assertEqual(m.engine().key, "volition")
+        self.assertTrue((root / "customization_items.xtbl").exists())
+        self.assertFalse((root / "INSTALLATION.txt").exists())
+
     def test_file_changed_by_game_is_left_alone(self):
         root = self.add_steam_game("40", "Another", "AN")
         m = self.mgr("another")
