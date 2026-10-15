@@ -188,10 +188,12 @@ function report(res, verb) {
   if (d) {
     msg += ` · ${d.files} mod file(s) active`;
     if (d.conflicts.length) msg += ` · ${d.conflicts.length} conflict(s)`;
+    if (d.packed) msg += `\n✔ Packed ${d.packed.count} file(s) into ${d.packed.file} — ready to play.`;
+    for (const w of d.warnings || []) msg += `\n⚠ ${w}`;
   }
   const m = res.mod || res.result;
   if (m && m.guessed) msg += `\n⚠ Couldn't tell where "${m.name}" goes — check its readme and use "Folder" if it doesn't work.`;
-  toast(msg);
+  toast(msg, !!(d && d.warnings && d.warnings.length));
 }
 
 async function upload(files) {

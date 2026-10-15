@@ -10,6 +10,7 @@ A mod manager for Steam Deck and Linux that works with **any installed game**, i
   - It merges `data/` into `Data/` instead of creating a duplicate folder that Wine can't see.
   - It tells you the `WINEDLLOVERRIDES` launch option that DLL loaders like BepInEx, REFramework and UE4SS need.
   - For Bethesda games, it updates `Plugins.txt` inside the Proton prefix.
+- **Repacks game archives for you:** some games ignore loose mod files. For Saints Row 2, DeckMod packs mod files into `patch.vpp_pc` itself, so there's no need for Gibbed tools or GOTR. It first checks that it fully understands your game's archive format, and leaves the game untouched if it doesn't.
 - **Load order and conflicts:** mods lower in the list win when two mods ship the same file. Mods can be turned on and off with one click.
 - **No dependencies:** it only needs the Python 3 that already ships with SteamOS. There is no pip and no root, and SteamOS updates won't wipe it.
 

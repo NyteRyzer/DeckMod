@@ -18,6 +18,11 @@ def _print_deploy(result: dict | None) -> None:
         print("Mods are currently disabled for this game (run 'deckmod deploy' to apply them).")
         return
     print(f"Deployed {result['files']} file(s).")
+    if result.get("packed"):
+        print(f"Packed {result['packed']['count']} mod file(s) into {result['packed']['file']} "
+              "- the game is ready to play.")
+    for w in result.get("warnings", []):
+        print(f"  warning: {w}")
     for c in result["conflicts"]:
         print(f"  conflict: {c['file']} -> using '{c['winner']}' over {', '.join(c['overridden'])}")
     for s in result.get("skipped", []):

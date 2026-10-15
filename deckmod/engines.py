@@ -68,6 +68,9 @@ class EngineProfile:
     exe_dirs: list[str] = field(default_factory=lambda: [""])
     notes: list[str] = field(default_factory=list)
     plugins_txt: tuple[str, bool] | None = None
+    # Packfile (relative to game root) that loose files of these types get packed into on deploy.
+    pack_into: str | None = None
+    pack_exts: set[str] = field(default_factory=set)
 
     def to_dict(self) -> dict:
         return {
@@ -168,15 +171,17 @@ def detect(game_path: str | Path, appid: str | None = None, exists=None) -> Engi
             "folder, so DeckMod installs them there.",
         ]
         if sr2:
-            notes.insert(0, "Saints Row 2 only loads loose files when the community 'Gentlemen of the "
-                         "Row' (GOTR) patch is installed. Install GOTR once (it's a Windows installer: "
-                         "add it to Steam as a non-Steam game, set it to run with Proton, and point it at "
-                         "the SR2 folder). Mods whose readme says to repack patch.vpp_pc then work without "
-                         "repacking.")
+            notes = [
+                "DeckMod packs Saints Row 2 mod files straight into patch.vpp_pc whenever you install, "
+                "enable or reorder mods, so no Gibbed tools or GOTR are needed - just start the game. "
+                "'Restore vanilla' puts the original patch.vpp_pc back.",
+            ]
         return EngineProfile(
             key="volition", name="Saints Row 2 (Volition)" if sr2 else "Volition (Saints Row / Red Faction)",
             ext_targets={e: "" for e in VOLITION_EXTS},
             notes=notes,
+            pack_into="patch.vpp_pc" if sr2 else None,
+            pack_exts=VOLITION_EXTS if sr2 else set(),
         )
 
     # ---- Godot

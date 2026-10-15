@@ -17,7 +17,7 @@ import time
 from collections import Counter
 from pathlib import Path, PurePosixPath
 
-from . import archive, config, engines
+from . import archive, config, engines, vpp
 from .games import Game
 
 IGNORED_NAMES = {"__macosx", ".ds_store", "thumbs.db", "desktop.ini"}
@@ -341,6 +341,7 @@ class GameManager:
         backups = config.backups_dir(self.game.id)
         manifest = {"files": [], "dirs": [], "plugins": None}
         skipped: list[str] = []
+        packed, warnings = self._pack(winners)
         try:
             for _key, (mod, src, dest) in sorted(winners.items()):
                 rel = resolve_case(self.root, dest)
@@ -375,8 +376,37 @@ class GameManager:
             self.state["deployed"] = True
             self.save()
         self.last_deploy = {"files": len(manifest["files"]), "conflicts": conflicts, "skipped": skipped,
-                            "launch_options": self.launch_options(manifest)}
+                            "launch_options": self.launch_options(manifest),
+                            "packed": packed, "warnings": warnings}
         return self.last_deploy
+
+    def _pack(self, winners: dict) -> tuple[dict | None, list[str]]:
+        """Games like Saints Row 2 ignore loose files: build a modded copy of their packfile
+        from the vanilla one and deploy that instead of the loose files."""
+        prof = self.engine()
+        if not prof.pack_into:
+            return None, []
+        pack_rel = resolve_case(self.root, prof.pack_into)
+        target = self.root / pack_rel
+        keys = [k for k, (_m, _src, dest) in winners.items()
+                if "/" not in dest and PurePosixPath(dest).suffix.lower() in prof.pack_exts]
+        if not keys or not target.is_file():
+            return None, []
+        try:
+            files = {PurePosixPath(winners[k][2]).name: winners[k][1].read_bytes() for k in keys}
+            data = vpp.Packfile(target.read_bytes()).rebuild(files)
+        except (vpp.VppError, OSError) as exc:
+            return None, [f"Couldn't pack mods into {pack_rel} ({exc}). The mod files were copied "
+                          "loose into the game folder instead, which the game may ignore."]
+        gen = self.dir / "generated" / PurePosixPath(pack_rel).name
+        gen.parent.mkdir(parents=True, exist_ok=True)
+        tmp = gen.with_suffix(".tmp")
+        tmp.write_bytes(data)
+        os.replace(tmp, gen)  # new inode, so a hardlink from an older deploy is never modified
+        for k in keys:
+            del winners[k]
+        winners[pack_rel.lower()] = ({"id": "deckmod-packfile"}, gen, pack_rel)
+        return {"file": pack_rel, "count": len(keys)}, []
 
     @staticmethod
     def _place(src: Path, out: Path, mode: str) -> str:

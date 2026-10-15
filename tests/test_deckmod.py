@@ -6,6 +6,8 @@ from pathlib import Path
 
 from deckmod import archive, games, vdf
 from deckmod.manager import GameManager, ModError
+from deckmod.vpp import Packfile
+from tests.test_vpp import make_vpp
 
 
 def write(path: Path, text: str = "x") -> Path:
@@ -122,20 +124,41 @@ class DeployTests(Base):
         self.assertEqual(mod["target"], "Proj/Content/Paks/~mods")
         self.assertTrue((root / "Proj/Content/Paks/~mods/MyMod_P.pak").exists())
 
-    def test_saints_row_2_loose_files(self):
+    def _sr2(self, patch: bytes):
         root = self.add_steam_game("9480", "Saints Row 2", "Saints Row 2")
         write(root / "SR2_pc.exe")
-        write(root / "patch.vpp_pc")
-        m = self.mgr("saints")
-        mod = m.install(str(make_zip(self.tmp / "shrek_1.0.zip", {
+        (root / "patch.vpp_pc").write_bytes(patch)
+        zip_path = make_zip(self.tmp / "shrek_1.0.zip", {
             "INSTALLATION.txt": "Pack files from MOD_FILES folder into patch.vpp_pc using Gibbed tools.",
-            "MOD_FILES/customization_items.xtbl": "x", "MOD_FILES/cmbod_human.g_cmesh_pc": "m"})))
+            "MOD_FILES/customization_items.xtbl": "shrek", "MOD_FILES/cmbod_human.g_cmesh_pc": "ogre"})
+        return root, self.mgr("saints"), zip_path
+
+    def test_saints_row_2_packs_into_patch_vpp(self):
+        vanilla = make_vpp([("weapons.xtbl", b"vanilla"), ("customization_items.xtbl", b"old")])
+        root, m, zip_path = self._sr2(vanilla)
+        mod = m.install(str(zip_path))
         self.assertEqual(mod["target"], "")
         self.assertFalse(mod["guessed"])
         self.assertIn("Gibbed", mod["readme"])
-        self.assertEqual(m.engine().key, "volition")
+        self.assertEqual(m.last_deploy["packed"], {"file": "patch.vpp_pc", "count": 2})
+        pf = Packfile((root / "patch.vpp_pc").read_bytes())
+        self.assertEqual(pf.read("customization_items.xtbl"), b"shrek")
+        self.assertEqual(pf.read("cmbod_human.g_cmesh_pc"), b"ogre")
+        self.assertEqual(pf.read("weapons.xtbl"), b"vanilla")
+        self.assertFalse((root / "customization_items.xtbl").exists())  # nothing loose
+        m.set_enabled("shrek", False)
+        self.assertEqual((root / "patch.vpp_pc").read_bytes(), vanilla)
+        m.set_enabled("shrek", True)
+        m.undeploy()
+        self.assertEqual((root / "patch.vpp_pc").read_bytes(), vanilla)
+        self.assertEqual(sorted(p.name for p in root.iterdir()), ["SR2_pc.exe", "patch.vpp_pc"])
+
+    def test_saints_row_2_unreadable_packfile_falls_back_safely(self):
+        root, m, zip_path = self._sr2(b"not a packfile")
+        m.install(str(zip_path))
+        self.assertEqual((root / "patch.vpp_pc").read_bytes(), b"not a packfile")
+        self.assertTrue(m.last_deploy["warnings"])
         self.assertTrue((root / "customization_items.xtbl").exists())
-        self.assertFalse((root / "INSTALLATION.txt").exists())
 
     def test_file_changed_by_game_is_left_alone(self):
         root = self.add_steam_game("40", "Another", "AN")
